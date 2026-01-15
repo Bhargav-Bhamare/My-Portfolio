@@ -578,6 +578,18 @@ Ready to deploy! 🚀`;
             type();
         }
 
+        // ===== LINE BY LINE ANIMATION =====
+        function addLinesSequentially(text, className = 'output') {
+            const lines = text.split('\n');
+            let delay = 50;
+
+            lines.forEach((line, index) => {
+                setTimeout(() => {
+                    addLine(line, className);
+                }, delay * index);
+            });
+        }
+
         // ===== PROCESS COMMAND =====
         function processCommand(input) {
             const cmd = input.trim().toLowerCase();
@@ -598,7 +610,7 @@ Ready to deploy! 🚀`;
                 const output = commands[cmd]();
                 if (output !== null) {
                     setTimeout(() => {
-                        addLine(output, 'output');
+                        addLinesSequentially(output, 'output');
                     }, 50);
                 }
             } else {
