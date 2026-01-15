@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhargav Bhamare - Terminal</title>
+    <style>
+        /* ===== GLOBAL RESETS & FONT ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        /* ===== VARIABLES ===== */
+        :root {
+            --bg-black: #0a0a0a;
+            --neon-green: #00ff41;
+            --neon-green-dim: #00cc33;
+            --cyan-accent: #00ffff;
+            --text-glow: 0 0 8px var(--neon-green);
+            --cursor-glow: 0 0 12px var(--neon-green);
+        }
+
+        /* ===== BODY & TERMINAL CONTAINER ===== */
+        body {
+            background: var(--bg-black);
+            color: var(--neon-green);
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            line-height: 1.6;
+            overflow: hidden;
+            position: relative;
+            height: 100vh;
+            cursor: none;
+        }
+
+        /* ===== CRT EFFECTS ===== */
+        /* Scanlines overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Noise/grain effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: 999;
+            animation: noise 0.2s infinite;
+        }
+
+        @keyframes noise {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-2%, -2%); }
+            20% { transform: translate(-4%, 4%); }
+            30% { transform: translate(4%, -4%); }
+            40% { transform: translate(-4%, -2%); }
+            50% { transform: translate(-2%, 4%); }
+            60% { transform: translate(4%, 2%); }
+            70% { transform: translate(2%, -4%); }
+            80% { transform: translate(-4%, 4%); }
+            90% { transform: translate(2%, 2%); }
+        }
+
+        /* Vignette effect */
+        .terminal-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            padding: 30px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.9);
+        }
+
+        /* ===== TERMINAL CONTENT ===== */
+        #terminal {
+            position: relative;
+            z-index: 10;
+            text-shadow: var(--text-glow);
+        }
+
+        .line {
+            margin-bottom: 4px;
+            word-wrap: break-word;
+        }
+
+        .prompt {
+            color: var(--neon-green);
+            font-weight: bold;
+        }
+
+        .output {
+            color: var(--neon-green-dim);
+            margin-left: 0;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            color: #ff4444;
+            text-shadow: 0 0 8px #ff4444;
+        }
+
+        .highlight {
+            color: var(--cyan-accent);
+            text-shadow: 0 0 6px var(--cyan-accent);
+        }
+
+        /* ===== INPUT LINE ===== */
+        .input-line {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        #user-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--neon-green);
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            flex: 1;
+            text-shadow: var(--text-glow);
+            caret-color: transparent;
+        }
+
+        /* ===== BLINKING CURSOR ===== */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 24px;
+            background: var(--neon-green);
+            margin-left: 2px;
+            animation: blink 1s step-end infinite;
+            box-shadow: var(--cursor-glow);
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* ===== STARTUP GLITCH ===== */
+        .glitch {
+            animation: glitch 0.3s ease-in-out;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(3px, -3px); }
+            60% { transform: translate(-3px, -3px); }
+            80% { transform: translate(3px, 3px); }
+            100% { transform: translate(0); }
+        }
+
+        /* ===== TYPING ANIMATION ===== */
+        .typing {
+            overflow: hidden;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        /* ===== SCROLLBAR STYLING ===== */
+        .terminal-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-container::-webkit-scrollbar-track {
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .terminal-container::-webkit-scrollbar-thumb {
+            background: var(--neon-green);
+            box-shadow: 0 0 6px var(--neon-green);
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 768px) {
+            body {
+                font-size: 16px;
+                cursor: auto;
+            }
+
+            .terminal-container {
+                padding: 15px;
+            }
+
+            #user-input {
+                font-size: 16px;
+            }
+
+            .cursor {
+                height: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                font-size: 14px;
+            }
+
+            .terminal-container {
+                padding: 10px;
+            }
+
+            #user-input {
+                font-size: 14px;
+            }
+
+            .cursor {
+                height: 18px;
+            }
+        }
+
+        /* ===== LINK STYLING ===== */
+        a {
+            color: var(--cyan-accent);
+            text-decoration: none;
+            text-shadow: 0 0 6px var(--cyan-accent);
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <div id="terminal"></div>
+        <div class="input-line">
+            <span class="prompt">C:\Users\BhargavBhamare&gt;</span>
+            <input type="text" id="user-input" autofocus autocomplete="off">
+            <span class="cursor"></span>
+        </div>
+    </div>
+
+    <script>
+        // ===== TERMINAL SYSTEM =====
+        const terminal = document.getElementById('terminal');
+        const userInput = document.getElementById('user-input');
+        const commandHistory = [];
+        let historyIndex = -1;
+
+        // ===== COMMAND DATABASE =====
+        const commands = {
+            help: () => {
+                return `Available commands:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  <span class="highlight">help</span>         - Display this help message
+  <span class="highlight">about</span>        - Learn about Bhargav Bhamare
+  <span class="highlight">skills</span>       - View technical skills & stack
+  <span class="highlight">projects</span>     - Browse featured projects
+  <span class="highlight">hackathons</span>   - Hackathon journey & achievements
+  <span class="highlight">experience</span>   - Professional experience & communities
+  <span class="highlight">contact</span>      - Get in touch
+  <span class="highlight">whoami</span>       - Identity check
+  <span class="highlight">sudo hire-me</span> - Execute hiring protocol
+  <span class="highlight">clear</span>        - Clear terminal screen
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+            },
+
+            about: () => {
+                return `<span class="highlight">╔═══════════════════════════════════════════╗</span>
+<span class="highlight">║</span>     BHARGAV BHAMARE - SYSTEM INFO        <span class="highlight">║</span>
+<span class="highlight">╚═══════════════════════════════════════════╝</span>
+
+> Full-Stack Developer & Creative Technologist
+> Hackathon Enthusiast | Problem Solver | Builder
+
+I transform ideas into scalable solutions through code.
+Passionate about competitive programming, building 
+immersive user experiences, and shipping products that 
+matter. I thrive in high-pressure environments like 
+hackathons where innovation meets execution.
+
+Status: <span class="highlight">[AVAILABLE FOR OPPORTUNITIES]</span>
+Mode: <span class="highlight">[ALWAYS LEARNING]</span>`;
+            },
+
+            skills: () => {
+                return `<span class="highlight">TECHNICAL STACK ANALYSIS</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="highlight">Frontend:</span>
+  ▹ React.js, Next.js, Vue.js
+  ▹ HTML5, CSS3, JavaScript (ES6+)
+  ▹ Tailwind CSS, SASS, Styled Components
+  ▹ Three.js, GSAP (Animation)
+
+<span class="highlight">Backend:</span>
+  ▹ Node.js, Express.js
+  ▹ Python, Django, Flask
+  ▹ RESTful APIs, GraphQL
+
+<span class="highlight">Database:</span>
+  ▹ MongoDB, PostgreSQL, MySQL
+  ▹ Firebase, Supabase
+  ▹ Redis (Caching)
+
+<span class="highlight">DevOps & Tools:</span>
+  ▹ Git, GitHub, Docker
+  ▹ AWS, Vercel, Netlify
+  ▹ CI/CD Pipelines
+
+<span class="highlight">Other:</span>
+  ▹ TypeScript, Webpack, Vite
+  ▹ WebSockets, Real-time systems
+  ▹ Agile, Scrum methodologies
+
+Skill Level: <span class="highlight">[████████████████████░] 95%</span>`;
+            },
+
+            projects: () => {
+                return `<span class="highlight">FEATURED PROJECTS</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="highlight">[01]</span> Real-Time Collaboration Platform
+     → WebSocket-based tool for team productivity
+     → Stack: React, Node.js, Socket.io, MongoDB
+
+<span class="highlight">[02]</span> AI-Powered Code Assistant
+     → VSCode extension for intelligent code completion
+     → Stack: TypeScript, OpenAI API, Electron
+
+<span class="highlight">[03]</span> Decentralized Task Manager
+     → Blockchain-based task tracking system
+     → Stack: Web3.js, Solidity, IPFS, React
+
+<span class="highlight">[04]</span> Interactive 3D Portfolio
+     → Immersive WebGL experience
+     → Stack: Three.js, GSAP, Vanilla JS
+
+<span class="highlight">[05]</span> Smart Expense Tracker
+     → ML-based expense categorization
+     → Stack: Python, TensorFlow, Flask, React
+
+Type '<span class="highlight">contact</span>' to discuss these projects!`;
+            },
+
+            hackathons: () => {
+                return `<span class="highlight">HACKATHON JOURNEY</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="highlight">Philosophy:</span> "Ship fast, learn faster, iterate always"
+
+<span class="highlight">Notable Participations:</span>
+
+  🏆 Winner - Smart India Hackathon 2024
+     → Built AI-driven accessibility tool
+     → 30+ hours of non-stop coding
+
+  🥈 Runner-up - HackXetra 2023
+     → Decentralized voting system
+     → Integrated blockchain & biometrics
+
+  🌟 Top 10 - CodeFury National Hackathon
+     → Real-time disaster management platform
+     → WebSockets + Geolocation APIs
+
+  💡 Participant - 15+ hackathons nationwide
+     → Explored fintech, healthtech, edtech domains
+     → Networked with 200+ developers
+
+<span class="highlight">Key Learnings:</span>
+  → Speed matters, but architecture matters more
+  → Great teams > Great ideas
+  → Sleep is optional, coffee is mandatory ☕
+
+Hackathons taught me to build under pressure,
+pivot quickly, and ship MVPs that actually work.`;
+            },
+
+            experience: () => {
+                return `<span class="highlight">PROFESSIONAL EXPERIENCE & COMMUNITIES</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="highlight">Work Experience:</span>
+
+  ▸ Frontend Developer Intern @ TechCorp (2024)
+    - Built responsive dashboards for 10k+ users
+    - Optimized load time by 40% using code splitting
+    - Tech: React, Redux, TypeScript
+
+  ▸ Full-Stack Developer @ Startup Labs (2023)
+    - Shipped 3 MVPs in 6 months
+    - Collaborated with cross-functional teams
+    - Tech: MERN Stack, AWS, Docker
+
+<span class="highlight">Community Involvement:</span>
+
+  ▸ Core Team Member - Google Developer Groups
+  ▸ Mentor - College Coding Club
+  ▸ Speaker - Tech talks on Web Performance
+  ▸ Open Source Contributor - 50+ merged PRs
+
+<span class="highlight">Collaborations:</span>
+  → Worked with designers, PMs, and engineers
+  → Led teams of 5+ in hackathons
+  → Comfortable in fast-paced startup environments
+
+I believe in learning by doing and teaching by sharing.`;
+            },
+
+            contact: () => {
+                return `<span class="highlight">CONTACT INFORMATION</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📧 Email:    bhargav.bhamare@example.com
+💼 LinkedIn: linkedin.com/in/bhargavbhamare
+🐙 GitHub:   github.com/bhargavbhamare
+🌐 Portfolio: bhargavbhamare.dev
+
+<span class="highlight">Availability:</span> Open to full-time roles, freelance 
+              projects, and collaboration opportunities.
+
+<span class="highlight">Response Time:</span> Usually within 24 hours
+
+Feel free to reach out! I'm always excited to 
+discuss tech, projects, or potential opportunities.
+
+Type '<span class="highlight">sudo hire-me</span>' if you're ready to onboard! 🚀`;
+            },
+
+            whoami: () => {
+                return `<span class="highlight">IDENTITY VERIFICATION PROTOCOL</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User: <span class="highlight">Bhargav Bhamare</span>
+Role: <span class="highlight">Full-Stack Developer | Creative Technologist</span>
+Access Level: <span class="highlight">ROOT</span>
+Status: <span class="highlight">AUTHENTICATED</span>
+
+Attributes:
+  → Caffeine-powered code machine ☕
+  → Debugger of impossible bugs 🐛
+  → Builder of things that scale 📈
+  → Hackathon veteran ⚡
+  → Open-source enthusiast 💚
+
+Special Abilities:
+  [x] Turning coffee into code
+  [x] Deploying on Friday evenings
+  [x] Reading stack traces like poetry
+  [x] Googling with supernatural precision
+
+Warning: <span class="highlight">May cause spontaneous project discussions</span>`;
+            },
+
+            'sudo hire-me': () => {
+                return `<span class="highlight">╔═══════════════════════════════════════════╗</span>
+<span class="highlight">║</span>   EXECUTING HIRING PROTOCOL...           <span class="highlight">║</span>
+<span class="highlight">╚═══════════════════════════════════════════╝</span>
+
+[sudo] password for recruiter: ********
+
+<span class="highlight">ACCESS GRANTED</span>
+
+Initializing candidate profile...
+━━━━━━━━━━━━━━━━━━ 100%
+
+<span class="highlight">ANALYSIS COMPLETE:</span>
+
+  ✓ Technical Skills: EXCELLENT
+  ✓ Problem Solving: EXCEPTIONAL  
+  ✓ Team Collaboration: OUTSTANDING
+  ✓ Learning Curve: STEEP (in a good way)
+  ✓ Passion Level: MAXIMUM
+  ✓ Coffee Consumption: OPTIMAL
+
+<span class="highlight">RECOMMENDATION:</span>
+  This candidate is production-ready and comes with:
+  → Zero deployment anxiety
+  → Built-in debugging mode
+  → Auto-scaling enthusiasm
+  → Lifetime support & updates
+
+<span class="highlight">WARNING:</span> Hiring this developer may result in:
+  • Increased code quality
+  • Faster sprint velocities  
+  • Dangerously good team morale
+  • Exponential project success
+
+<span class="highlight">NEXT STEPS:</span>
+  Execute: contact bhargav.bhamare@example.com
+  Or run: '<span class="highlight">contact</span>' command
+
+Ready to deploy! 🚀`;
+            },
+
+            clear: () => {
+                terminal.innerHTML = '';
+                return null;
+            }
+        };
+
+        // ===== STARTUP SEQUENCE =====
+        function initTerminal() {
+            const bootSequence = [
+                'SYSTEM BOOT SEQUENCE INITIATED...',
+                'Loading kernel modules... <span class="highlight">[OK]</span>',
+                'Initializing terminal interface... <span class="highlight">[OK]</span>',
+                'Mounting file systems... <span class="highlight">[OK]</span>',
+                'Starting network services... <span class="highlight">[OK]</span>',
+                '',
+                '<span class="highlight">╔═══════════════════════════════════════════╗</span>',
+                '<span class="highlight">║</span>  BHARGAV BHAMARE TERMINAL v2.0          <span class="highlight">║</span>',
+                '<span class="highlight">║</span>  Type \'help\' for available commands    <span class="highlight">║</span>',
+                '<span class="highlight">╚═══════════════════════════════════════════╝</span>',
+                ''
+            ];
+
+            terminal.classList.add('glitch');
+            setTimeout(() => terminal.classList.remove('glitch'), 300);
+
+            let delay = 0;
+            bootSequence.forEach((line, index) => {
+                setTimeout(() => {
+                    addLine(line, 'output');
+                }, delay);
+                delay += index < 5 ? 100 : 0;
+            });
+        }
+
+        // ===== ADD LINE TO TERMINAL =====
+        function addLine(text, className = '') {
+            const line = document.createElement('div');
+            line.className = `line ${className}`;
+            line.innerHTML = text;
+            terminal.appendChild(line);
+            scrollToBottom();
+        }
+
+        // ===== TYPEWRITER EFFECT =====
+        function typeWriter(text, className = 'output', callback) {
+            const line = document.createElement('div');
+            line.className = `line ${className}`;
+            terminal.appendChild(line);
+
+            let i = 0;
+            const speed = 1; // Faster typing for better UX
+
+            function type() {
+                if (i < text.length) {
+                    line.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    if (callback) callback();
+                }
+                scrollToBottom();
+            }
+
+            type();
+        }
+
+        // ===== PROCESS COMMAND =====
+        function processCommand(input) {
+            const cmd = input.trim().toLowerCase();
+            
+            // Show command with prompt
+            addLine(`C:\\Users\\BhargavBhamare&gt; ${input}`, 'prompt');
+
+            // Add to history
+            if (cmd) {
+                commandHistory.unshift(input);
+                historyIndex = -1;
+            }
+
+            // Execute command
+            if (cmd === '') {
+                return;
+            } else if (commands[cmd]) {
+                const output = commands[cmd]();
+                if (output !== null) {
+                    setTimeout(() => {
+                        addLine(output, 'output');
+                    }, 50);
+                }
+            } else {
+                setTimeout(() => {
+                    addLine(`'${input}' is not recognized as an internal or external command.`, 'error');
+                    addLine(`Type '<span class="highlight">help</span>' for a list of available commands.`, 'output');
+                }, 50);
+            }
+
+            // Clear input
+            userInput.value = '';
+        }
+
+        // ===== SCROLL TO BOTTOM =====
+        function scrollToBottom() {
+            const container = document.querySelector('.terminal-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ===== EVENT LISTENERS =====
+        userInput.addEventListener('keydown', (e) => {
+            // Enter key
+            if (e.key === 'Enter') {
+                processCommand(userInput.value);
+            }
+            
+            // Up arrow - previous command
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    userInput.value = commandHistory[historyIndex];
+                }
+            }
+            
+            // Down arrow - next command
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    userInput.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = -1;
+                    userInput.value = '';
+                }
+            }
+        });
+
+        // Keep input focused
+        document.addEventListener('click', () => {
+            userInput.focus();
+        });
+
+        // ===== INITIALIZE ON LOAD =====
+        window.addEventListener('load', () => {
+            initTerminal();
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
