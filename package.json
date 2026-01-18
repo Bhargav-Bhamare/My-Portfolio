@@ -1,0 +1,26 @@
+{
+  "engines": {
+    "node": "22.18.0"
+  },
+  "name": "my-portfolio",
+  "version": "1.0.0",
+  "description": "Vibe Coded my Portfolio",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bhargav-Bhamare/My-Portfolio.git"
+  },
+  "author": "Bhargav Bhamare",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bhargav-Bhamare/My-Portfolio/issues"
+  },
+  "homepage": "https://github.com/Bhargav-Bhamare/My-Portfolio#readme",
+  "dependencies": {
+    "ejs": "^4.0.1",
+    "express": "^5.2.1"
+  }
+}
